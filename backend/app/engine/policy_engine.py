@@ -63,27 +63,31 @@ def _normalize(text: str) -> str:
 
 def _text_contains_any(text: str, keywords: list[str]) -> bool:
     normalized = _normalize(text)
-    return any(kw in normalized for kw in keywords)
+    for kw in keywords:
+        if " " in kw:
+            if kw in normalized:
+                return True
+        elif re.search(rf"\b{re.escape(kw)}\b", normalized):
+            return True
+    return False
 
 
-def _collect_claim_text(extracted: ExtractedClaim) -> str:
-    parts = [
-        extracted.diagnosis or "",
-        extracted.treatment or "",
-        " ".join(extracted.tests_ordered),
-        " ".join(item.description for item in extracted.line_items),
-    ]
-    return " ".join(parts)
+def _collect_exclusion_text(extracted: ExtractedClaim) -> str:
+    """Diagnosis/treatment level only — line items evaluated per category."""
+    return " ".join(
+        [
+            extracted.diagnosis or "",
+            extracted.treatment or "",
+            " ".join(extracted.tests_ordered),
+        ]
+    )
 
 
 def _match_excluded_procedure(description: str, excluded: list[str]) -> str | None:
     normalized = _normalize(description)
     for proc in excluded:
-        if _normalize(proc) in normalized or normalized in _normalize(proc):
-            return proc
-    for proc in excluded:
         proc_norm = _normalize(proc)
-        if any(word in normalized for word in proc_norm.split() if len(word) > 4):
+        if proc_norm in normalized or normalized in proc_norm:
             return proc
     return None
 
@@ -108,16 +112,6 @@ class PolicyEngine:
         extracted: ExtractedClaim,
     ) -> PolicyEvaluationResult:
         checks: list[dict[str, Any]] = []
-
-        per_claim = self._check_per_claim_limit(submission)
-        checks.append(per_claim)
-        if not per_claim["passed"]:
-            return self._rejected(
-                ["PER_CLAIM_EXCEEDED"],
-                per_claim["message"],
-                checks,
-                confidence=0.98,
-            )
 
         exclusion = self._check_exclusions(extracted)
         checks.append(exclusion)
@@ -173,6 +167,16 @@ class PolicyEngine:
                     confidence=0.94,
                 )
 
+        per_claim = self._check_per_claim_limit(submission)
+        checks.append(per_claim)
+        if not per_claim["passed"]:
+            return self._rejected(
+                ["PER_CLAIM_EXCEEDED"],
+                per_claim["message"],
+                checks,
+                confidence=0.98,
+            )
+
         checks.append({"rule": "POLICY_CLEAR", "passed": True, "message": "All policy checks passed"})
         return PolicyEvaluationResult(
             passed=True,
@@ -199,7 +203,7 @@ class PolicyEngine:
         }
 
     def _check_exclusions(self, extracted: ExtractedClaim) -> dict[str, Any]:
-        claim_text = _collect_claim_text(extracted)
+        claim_text = _collect_exclusion_text(extracted)
         for exclusion in self._policy.exclusions.conditions:
             keywords = EXCLUSION_KEYWORDS.get(_normalize(exclusion), [_normalize(exclusion)])
             if _text_contains_any(claim_text, keywords):
@@ -223,7 +227,12 @@ class PolicyEngine:
         if member.join_date is None:
             return {"rule": "WAITING_PERIOD", "passed": True, "message": "No join date; waiting period skipped."}
 
-        claim_text = _collect_claim_text(extracted)
+        claim_text = " ".join(
+            [
+                _collect_exclusion_text(extracted),
+                " ".join(item.description for item in extracted.line_items),
+            ]
+        )
         for condition_key, wait_days in self._policy.waiting_periods.specific_conditions.items():
             keywords = WAITING_PERIOD_KEYWORDS.get(condition_key, [condition_key.replace("_", " ")])
             if not _text_contains_any(claim_text, keywords):
@@ -299,6 +308,18 @@ class PolicyEngine:
         rejected_count = 0
 
         for item in line_items:
+            if _match_covered_procedure(item.description, covered):
+                decisions.append(
+                    LineItemDecision(
+                        description=item.description,
+                        amount=item.amount,
+                        approved=True,
+                        reason="Covered dental procedure.",
+                    )
+                )
+                approved_total += item.amount
+                continue
+
             excluded_match = _match_excluded_procedure(item.description, excluded)
             if excluded_match:
                 decisions.append(
@@ -312,26 +333,15 @@ class PolicyEngine:
                 rejected_count += 1
                 continue
 
-            if _match_covered_procedure(item.description, covered):
-                decisions.append(
-                    LineItemDecision(
-                        description=item.description,
-                        amount=item.amount,
-                        approved=True,
-                        reason="Covered dental procedure.",
-                    )
+            decisions.append(
+                LineItemDecision(
+                    description=item.description,
+                    amount=item.amount,
+                    approved=False,
+                    reason="Procedure not listed as covered under dental OPD.",
                 )
-                approved_total += item.amount
-            else:
-                decisions.append(
-                    LineItemDecision(
-                        description=item.description,
-                        amount=item.amount,
-                        approved=False,
-                        reason="Procedure not listed as covered under dental OPD.",
-                    )
-                )
-                rejected_count += 1
+            )
+            rejected_count += 1
 
         approved_count = sum(1 for d in decisions if d.approved)
         if approved_count > 0 and rejected_count > 0:
