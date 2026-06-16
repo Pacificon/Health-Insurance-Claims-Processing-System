@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
+from app.api.claims import router as claims_router
 from app.config import get_settings
+from app.db.database import init_db
 from app.services.policy_loader import get_policy_loader
 
 settings = get_settings()
@@ -13,7 +15,8 @@ app = FastAPI(
 
 
 @app.on_event("startup")
-def warm_policy_cache() -> None:
+def startup() -> None:
+    init_db()
     get_policy_loader().load()
 
 
@@ -42,3 +45,6 @@ def policy_summary() -> dict:
         "network_hospital_count": len(policy.network_hospitals),
         "member_count": len(policy.members),
     }
+
+
+app.include_router(claims_router)

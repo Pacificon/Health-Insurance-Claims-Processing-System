@@ -10,13 +10,18 @@ def _repo_root() -> Path:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=str(_repo_root() / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "Plum Claims Adjudication API"
     app_version: str = "0.1.0"
     policy_terms_path: Path = _repo_root() / "policy_terms.json"
     test_cases_path: Path = _repo_root() / "test_cases.json"
     gemini_api_key: str = ""
+    database_url: str = "sqlite:///./.data/claims.db"
 
 
 @lru_cache
