@@ -17,7 +17,7 @@ Automates claim review for Indian group health insurance: document validation, s
 
 ## Status
 
-**Stage 0** — Repository initialized with assignment spec and implementation plan.
+**Stage 9** — Next.js UI: claim submission form, test-case presets, and decision trace timeline viewer.
 
 See [PLUM_CLAIMS_PLANNING.md](PLUM_CLAIMS_PLANNING.md) for the full build plan and staged commit workflow.
 
@@ -29,8 +29,8 @@ See [PLUM_CLAIMS_PLANNING.md](PLUM_CLAIMS_PLANNING.md) for the full build plan a
 ├── test_cases.json            # 12 evaluation scenarios
 ├── sample_documents_guide.md  # Indian medical document formats
 ├── PLUM_CLAIMS_PLANNING.md    # Implementation plan
-├── backend/                   # (Stage 1+) FastAPI + agents
-├── frontend/                  # (Stage 9+) Next.js UI
+├── backend/                   # FastAPI + agents
+├── frontend/                  # Next.js claim UI + trace viewer
 └── docs/                      # (Stage 10+) Architecture, contracts
 ```
 
@@ -45,21 +45,32 @@ See [PLUM_CLAIMS_PLANNING.md](PLUM_CLAIMS_PLANNING.md) for the full build plan a
 
 ## Local setup
 
-_Coming in Stage 1._
-
 ```bash
-# Backend (after Stage 1)
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+pytest
+uvicorn app.main:app --reload --app-dir .
+```
 
-# Frontend (after Stage 9)
+API runs at `http://127.0.0.1:8000`. Try `GET /health` and `GET /policy/summary`.
+
+### Frontend
+
+```bash
 cd frontend
+cp .env.local.example .env.local   # NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 npm install
 npm run dev
 ```
+
+Open `http://localhost:3000` with the API running. The UI supports:
+
+- Claim submission with document metadata and optional eval extraction JSON
+- Loading any of the 12 Plum test-case presets
+- Full decision trace timeline after submit
+- Lookup of previously saved claims by ID
 
 ## Environment variables
 

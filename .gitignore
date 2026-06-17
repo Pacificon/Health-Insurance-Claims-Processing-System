@@ -10,7 +10,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -40,6 +40,7 @@ out/
 .env
 .env.*
 !.env.example
+!**/.env.local.example
 
 # IDE
 .idea/

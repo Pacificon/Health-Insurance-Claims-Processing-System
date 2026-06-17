@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.claims import router as claims_router
 from app.config import get_settings
@@ -11,6 +12,14 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="Multi-agent health insurance claims adjudication API",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

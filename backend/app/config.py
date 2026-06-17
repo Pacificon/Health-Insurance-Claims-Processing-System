@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     test_cases_path: Path = _repo_root() / "test_cases.json"
     gemini_api_key: str = ""
     database_url: str = "sqlite:///./.data/claims.db"
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 
 
 @lru_cache
