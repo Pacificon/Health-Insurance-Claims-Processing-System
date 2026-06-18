@@ -1,5 +1,6 @@
 from collections.abc import Generator
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import DateTime, Float, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -33,9 +34,19 @@ class ClaimRecord(Base):
     )
 
 
+def _ensure_sqlite_parent_dir(database_url: str) -> None:
+    if not database_url.startswith("sqlite"):
+        return
+    db_path = database_url.removeprefix("sqlite:///")
+    if not db_path or db_path == ":memory:":
+        return
+    Path(db_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
+
+
 def init_db(database_url: str | None = None) -> None:
     global _engine, SessionLocal
     url = database_url or get_settings().database_url
+    _ensure_sqlite_parent_dir(url)
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     if _engine is not None:
         _engine.dispose()
