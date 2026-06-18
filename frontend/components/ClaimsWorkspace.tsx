@@ -1,9 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { getClaim } from "@/lib/api";
+import { API_BASE, getClaim } from "@/lib/api";
 import type { DecisionTrace } from "@/lib/types";
 import { DecisionTraceViewer } from "./DecisionTraceViewer";
 import { ClaimForm } from "./ClaimForm";
@@ -11,6 +11,31 @@ import { ClaimForm } from "./ClaimForm";
 export function ClaimsWorkspace() {
   const [trace, setTrace] = useState<DecisionTrace | null>(null);
   const [lookupId, setLookupId] = useState("");
+  const [apiStatus, setApiStatus] = useState<"checking" | "ok" | "error">("checking");
+  const [apiDetail, setApiDetail] = useState("");
+
+  useEffect(() => {
+    fetch(`${API_BASE}/health`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const body = await response.json();
+        if (body.status !== "ok" || body.app !== "Plum Claims Adjudication API") {
+          throw new Error("Another app is running on this port (not the Plum claims API).");
+        }
+        setApiStatus("ok");
+        setApiDetail(`Connected to ${API_BASE}`);
+      })
+      .catch((error: unknown) => {
+        setApiStatus("error");
+        setApiDetail(
+          error instanceof Error
+            ? error.message
+            : `Cannot reach ${API_BASE}. Run: uvicorn app.main:app --reload --app-dir . --port 8001`,
+        );
+      });
+  }, []);
 
   const lookupMutation = useMutation({
     mutationFn: getClaim,
@@ -28,6 +53,17 @@ export function ClaimsWorkspace() {
           Submit a claim, inspect the full decision trace, and see exactly which pipeline stages
           passed, failed, or were skipped.
         </p>
+        <div
+          className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+            apiStatus === "ok"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : apiStatus === "error"
+                ? "border-rose-200 bg-rose-50 text-rose-900"
+                : "border-slate-200 bg-slate-50 text-slate-700"
+          }`}
+        >
+          {apiStatus === "checking" ? "Checking API connection…" : apiDetail}
+        </div>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-2">
