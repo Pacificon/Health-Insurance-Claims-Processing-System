@@ -15,23 +15,15 @@ Automates claim review for Indian group health insurance: document validation, s
 | Database | SQLite (local) / PostgreSQL (production) |
 | Deploy | Railway |
 
-## Status
-
-**Stage 9** — Next.js UI: claim submission form, test-case presets, and decision trace timeline viewer.
-
-See [PLUM_CLAIMS_PLANNING.md](PLUM_CLAIMS_PLANNING.md) for the full build plan and staged commit workflow.
 
 ## Repository layout
 
 ```
-├── assignment.md              # Plum assignment specification
 ├── policy_terms.json          # Policy rules, coverage, member roster
 ├── test_cases.json            # 12 evaluation scenarios
 ├── sample_documents_guide.md  # Indian medical document formats
-├── PLUM_CLAIMS_PLANNING.md    # Implementation plan
 ├── backend/                   # FastAPI + agents
 ├── frontend/                  # Next.js claim UI + trace viewer
-└── docs/                      # (Stage 10+) Architecture, contracts
 ```
 
 ## Assignment resources
@@ -82,8 +74,4 @@ DATABASE_URL=sqlite:///./claims.db
 
 ## Live demo
 
-_Deploy URL will be added in Stage 10._
-
-## Author
-
-Built as part of the Plum AI Engineer hiring process.
+[_Deploy URL will be added in Stage 10._](https://health-insurance-claims-processing-system-krfx04str.vercel.app/)
