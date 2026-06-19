@@ -74,4 +74,4 @@ DATABASE_URL=sqlite:///./claims.db
 
 ## Live demo
 
-[_Deploy URL will be added in Stage 10._](https://health-insurance-claims-processing-system-krfx04str.vercel.app/)
+https://health-insurance-claims-processing-system-krfx04str.vercel.app/
